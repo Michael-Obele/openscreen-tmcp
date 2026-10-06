@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# ---------------------------------------------------------------------------
+# Working plan for this repo (architecture, tool spec, client-leg, tasks).
+# Kept OUT of version control on purpose: it is a working document, and the
+# canonical copy lives in the AI-Plans repo.
+# ---------------------------------------------------------------------------
+plan/
+
+# ---------------------------------------------------------------------------
+# Secrets. OPENSCREEN_MCP_AUTHORIZATION / OPENSCREEN_MCP_TOKEN must never be
+# committed. Note this also covers .vscode/mcp.json, because the dogfooding
+# config there carries the token in its env block.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+.vscode/
+.mcp.json
+mcp.json
+
+# build output
+dist/
+build/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# runtime scratch
+.bun/
+*.tsbuildinfo
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
