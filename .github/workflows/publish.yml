@@ -9,7 +9,7 @@ name: Publish Package
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -31,8 +31,8 @@ jobs:
       # requires npm >= 11.5.1, Node >= 22.14).
       - uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
       - run: bun install --frozen-lockfile
