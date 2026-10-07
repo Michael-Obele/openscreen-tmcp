@@ -71,3 +71,59 @@ export function scriptedClient(
     calls,
   };
 }
+
+/**
+ * A miniature OpenScreen data dir: one project file, one recording, and the
+ * `getCurrentDocument` payload that points at it. Needs ffmpeg (the clip is
+ * synthetic), so callers gate with `describe.skipIf`.
+ */
+export interface FramesFixture {
+  dataDir: string;
+  doc: Record<string, unknown>;
+  clipPath: string;
+}
+
+export async function framesFixture(): Promise<FramesFixture> {
+  const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dataDir = await mkdtemp(join(tmpdir(), "openscreen-data-"));
+  await mkdir(join(dataDir, "projects"), { recursive: true });
+  await mkdir(join(dataDir, "recordings"), { recursive: true });
+
+  const clipPath = join(dataDir, "recordings", "rec.mp4");
+  const proc = Bun.spawnSync([
+    "ffmpeg", "-y", "-v", "error",
+    "-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=6",
+    "-pix_fmt", "yuv420p", clipPath,
+  ]);
+  if (proc.exitCode !== 0) throw new Error(String(proc.stderr));
+
+  const assetId = "asset_1";
+  const projectId = "proj_1";
+  const projectPath = join(dataDir, "projects", `${projectId}.openscreen`);
+  await writeFile(
+    projectPath,
+    JSON.stringify({
+      schemaVersion: 8,
+      project: { id: projectId, title: "Fixture" },
+      assets: [
+        {
+          id: assetId,
+          kind: "video",
+          label: "rec.mp4",
+          originalPath: clipPath,
+          durationSec: 6,
+        },
+      ],
+    }),
+  );
+
+  const doc = {
+    project: { id: projectId, title: "Fixture" },
+    primaryAssetId: assetId,
+    assets: [{ id: assetId, label: "rec.mp4", durationSec: 6 }],
+  };
+  return { dataDir, doc, clipPath };
+}
