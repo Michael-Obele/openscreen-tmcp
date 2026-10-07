@@ -122,6 +122,15 @@ export const DISPATCH: readonly DispatchRow[] = [
     build: (input) => pick(input, ["assetId"]),
   },
   {
+    // Local: ffmpeg reads the recording off disk. Claims no upstream tool.
+    tool: "read",
+    action: "frames",
+    upstream: [],
+    required: need(),
+    target: () => "",
+    build: () => ({}),
+  },
+  {
     // Local diagnostic — claims no upstream tool.
     tool: "read",
     action: "upstream",

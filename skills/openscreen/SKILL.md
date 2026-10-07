@@ -11,7 +11,8 @@ You drive the **OpenScreen** app, which has a screen recording open in its edito
 
 1. `read` with `action: "project"` — see the assets, the placed clips, and existing trims/modifiers. **Never edit blind.**
 2. If the user talks about what was _said_, `read` with `action: "transcript"` (or `"words"` for word-level ids).
-3. Then act.
+3. `read` with `action: "frames"`: actually SEE the recording. Use it before placing a zoom, a trim or an annotation: `{"action":"frames","count":6}` gives the shape of the whole take with timestamps burned in when a caption font is found (a false `burnIn` in the reply means none were drawn), `{"action":"frames","mode":"frame","at":[14.18]}` gives the exact frame at a moment you already know. Times are **source seconds** (like trims), not the edited timeline. `detail:"high"` when you must read text on screen.
+4. Then act.
 
 ## The one rule that causes the most damage
 
@@ -68,5 +69,6 @@ Use `apply` to send an ordered list of operations in a single call. It is **orde
 - _"not reachable"_ → the OpenScreen app is closed, or AI settings → MCP server is off.
 - _"Project edits"_ (upstream wording) → edits are switched off in OpenScreen's MCP server section. Tell the user; do not retry.
 - _"token rejected"_ → the token was regenerated. Tell the user to regenerate and update their MCP config.
+- `frames` returns `Tried:` with a list of paths; the recording moved. Pass `path`, or reopen the project in OpenScreen so it relinks.
 
 Report the real reason. Never summarise an upstream refusal into something vaguer.

@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
 import { UpstreamClient } from "../src/upstream/client";
 import { dispatch, dispatchProblem } from "../src/upstream/dispatch";
 import { runEffect } from "../src/tools/effect";
 import { runRead } from "../src/tools/read";
 import { runTrim } from "../src/tools/trim";
-import { scriptedClient, TEST_CONFIG } from "./helpers";
+import { framesFixture, scriptedClient, TEST_CONFIG } from "./helpers";
 
 function text(result: { content: Array<{ text?: string }> }): string {
   return result.content.map((item) => item.text ?? "").join("\n");
@@ -232,5 +235,83 @@ describe("error surfacing", () => {
     );
     expect(text(result as never)).toContain("AI settings → MCP server");
     expect(text(result as never)).not.toContain("at Object.");
+  });
+});
+
+describe.skipIf(
+  !(existsSync("/usr/bin/ffmpeg") && existsSync("/usr/bin/ffprobe")),
+)("read frames", () => {
+  test("returns an image plus the ordered times", async () => {
+    const fx = await framesFixture();
+    const { client } = scriptedClient(() => ({
+      content: [{ type: "text", text: JSON.stringify(fx.doc) }],
+    }));
+
+    const result = await runRead(
+      { action: "frames", mode: "sheet", count: 4 },
+      client,
+      { dataDir: fx.dataDir, font: "" },
+    );
+
+    expect(result.isError).toBeFalsy();
+    const kinds = (result.content ?? []).map((c) => c.type);
+    expect(kinds).toEqual(["image", "text"]);
+
+    const caption = JSON.parse(
+      (result.content?.[1] as { text: string }).text,
+    ) as { times: number[]; width: number; file: string };
+    expect(caption.times).toHaveLength(4);
+    expect(caption.file).toBe(fx.clipPath);
+    expect(caption.width).toBeGreaterThan(0);
+
+    await rm(fx.dataDir, { recursive: true, force: true });
+  });
+
+  test('mode:"frame" with several times errors instead of rendering only the first', async () => {
+    const fx = await framesFixture();
+    const { client } = scriptedClient(() => ({
+      content: [{ type: "text", text: JSON.stringify(fx.doc) }],
+    }));
+
+    const result = await runRead(
+      { action: "frames", mode: "frame", at: [1, 2, 3] },
+      client,
+      { dataDir: fx.dataDir, font: "" },
+    );
+
+    // An error, not a still whose caption lists times the pixels lack.
+    expect(result.isError).toBe(true);
+    expect((result.content ?? []).map((c) => c.type)).toEqual(["text"]);
+    const message = (result.content?.[0] as { text: string }).text;
+    expect(message).toContain("3 times");
+    expect(message).toContain('mode:"sheet"');
+    expect(message).toContain("single `at`");
+
+    await rm(fx.dataDir, { recursive: true, force: true });
+  });
+
+  test("a resolution failure is isError with the message, not a throw", async () => {
+    const fx = await framesFixture();
+    await rm(fx.clipPath, { force: true });
+    await rm(join(fx.dataDir, "projects", "proj_1.openscreen"), {
+      force: true,
+    });
+    const { client } = scriptedClient(() => ({
+      content: [{ type: "text", text: JSON.stringify(fx.doc) }],
+    }));
+
+    const result = await runRead(
+      { action: "frames" },
+      client,
+      { dataDir: fx.dataDir, font: "" },
+    );
+    expect(result.isError).toBe(true);
+    const text = (result.content ?? [])
+      .map((c) => (c.type === "text" ? c.text : ""))
+      .join("\n");
+    expect(text).toContain("Tried:");
+    expect(text).not.toContain("at Object.");
+
+    await rm(fx.dataDir, { recursive: true, force: true });
   });
 });

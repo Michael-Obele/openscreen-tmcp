@@ -152,6 +152,7 @@ describe("downstream surface", () => {
       "cursor",
       "transcript",
       "words",
+      "frames",
       "upstream",
     ]);
     expect(actionsFor("trim")).toEqual(["add", "addMany", "set", "remove"]);
