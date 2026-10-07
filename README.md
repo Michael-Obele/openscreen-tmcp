@@ -40,14 +40,14 @@ Optional: `OPENSCREEN_TMCP_TIMEOUT_MS` (default `15000`) and `OPENSCREEN_TMCP_DE
 
 ## The 6 tools
 
-| Tool      | Actions                                                                          | Absorbs upstream                                                                                |
-| --------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `read`    | `project`, `cursor`, `transcript`, `words`, **`frames`**, `upstream`              | getCurrentDocument, getCursorTrack, getTranscript, getTranscriptWords + a local coverage report + local ffmpeg frame rendering |
-| `trim`    | `add`, `addMany`, `set`, `remove`                                                | addTrim, addTrims, setTrim, removeTrim                                                          |
-| `clip`    | `setRange`, `move`, `remove`, `replace`                                          | setClipRange, moveClip, removeClip, replaceTimeline                                             |
-| `effect`  | `add`, `set`, `remove` × `kind` ∈ zoom \| speed \| annotation \| camera \| audio | 11 effect ops + removeModifier                                                                  |
-| `caption` | `wordId` + `text`                                                                | setWordText                                                                                     |
-| `apply`   | ordered batch of the above                                                       | —                                                                                               |
+| Tool      | Actions                                                                          | Absorbs upstream                                                                                                               |
+| --------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `read`    | `project`, `cursor`, `transcript`, `words`, **`frames`**, `upstream`             | getCurrentDocument, getCursorTrack, getTranscript, getTranscriptWords + a local coverage report + local ffmpeg frame rendering |
+| `trim`    | `add`, `addMany`, `set`, `remove`                                                | addTrim, addTrims, setTrim, removeTrim                                                                                         |
+| `clip`    | `setRange`, `move`, `remove`, `replace`                                          | setClipRange, moveClip, removeClip, replaceTimeline                                                                            |
+| `effect`  | `add`, `set`, `remove` × `kind` ∈ zoom \| speed \| annotation \| camera \| audio | 11 effect ops + removeModifier                                                                                                 |
+| `caption` | `wordId` + `text`                                                                | setWordText                                                                                                                    |
+| `apply`   | ordered batch of the above                                                       | —                                                                                                                              |
 
 Coverage is exact: 4 + 4 + 4 + 12 + 1 = **25**, proved by `test/coverage.test.ts` — if OpenScreen ever renames a tool, that test fails with the unmapped name.
 

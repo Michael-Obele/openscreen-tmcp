@@ -94,9 +94,17 @@ export async function framesFixture(): Promise<FramesFixture> {
 
   const clipPath = join(dataDir, "recordings", "rec.mp4");
   const proc = Bun.spawnSync([
-    "ffmpeg", "-y", "-v", "error",
-    "-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=6",
-    "-pix_fmt", "yuv420p", clipPath,
+    "ffmpeg",
+    "-y",
+    "-v",
+    "error",
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc=size=640x360:rate=30:duration=6",
+    "-pix_fmt",
+    "yuv420p",
+    clipPath,
   ]);
   if (proc.exitCode !== 0) throw new Error(String(proc.stderr));
 

@@ -300,11 +300,10 @@ describe.skipIf(
       content: [{ type: "text", text: JSON.stringify(fx.doc) }],
     }));
 
-    const result = await runRead(
-      { action: "frames" },
-      client,
-      { dataDir: fx.dataDir, font: "" },
-    );
+    const result = await runRead({ action: "frames" }, client, {
+      dataDir: fx.dataDir,
+      font: "",
+    });
     expect(result.isError).toBe(true);
     const text = (result.content ?? [])
       .map((c) => (c.type === "text" ? c.text : ""))

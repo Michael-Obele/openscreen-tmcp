@@ -125,7 +125,8 @@ export interface FramesConfig {
 }
 
 /** Debian/Ubuntu font path; absent elsewhere, which render falls back from. */
-const DEFAULT_FRAMES_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+const DEFAULT_FRAMES_FONT =
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
 /**
  * Ask fontconfig for a sans-serif font file — the design's last resort before
