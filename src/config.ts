@@ -109,3 +109,36 @@ export function loadConfig(
       e.OPENSCREEN_TMCP_DEBUG === "true" || e.OPENSCREEN_TMCP_DEBUG === "1",
   };
 }
+
+/**
+ * Local-only settings for `read action:"frames"`. Split from {@link Config}
+ * because they configure the machine, not the upstream connection, and
+ * because tests point them at a fixture directory without touching the real
+ * OpenScreen data.
+ */
+export interface FramesConfig {
+  /** OpenScreen's data dir: `projects/`, `recordings/`, the media registry. */
+  dataDir: string;
+  /** Font used to burn timestamps into frames. Empty = no burn-in. */
+  font: string;
+}
+
+/** Debian/Ubuntu font path; absent elsewhere, which render falls back from. */
+const DEFAULT_FRAMES_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+
+/**
+ * Where OpenScreen keeps its data and which font stamps the time onto a
+ * frame. Read from `env` on every call so a test can pass its own object
+ * instead of mutating `process.env`.
+ */
+export function loadFramesConfig(
+  env: Record<string, string | undefined> = process.env,
+): FramesConfig {
+  const explicit = env.OPENSCREEN_DATA_DIR?.trim();
+  const xdg = env.XDG_CONFIG_HOME?.trim();
+  const dataDir =
+    explicit ||
+    (xdg ? `${xdg}/openscreen` : `${env.HOME ?? ""}/.config/openscreen`);
+  const font = env.OPENSCREEN_FRAMES_FONT?.trim() || DEFAULT_FRAMES_FONT;
+  return { dataDir, font };
+}
