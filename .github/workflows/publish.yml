@@ -34,7 +34,7 @@ jobs:
       #    pushes and manual runs (those paths bring their own version).
       - name: Release please
         id: release
-        if: github.event_name == "push" && github.ref == "refs/heads/main"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: googleapis/release-please-action@v4
         with:
           release-type: node
@@ -56,32 +56,32 @@ jobs:
           fi
 
       - uses: actions/checkout@v6
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
 
       # Bun runs install/tests (this repo is Bun-only).
       - uses: oven-sh/setup-bun@v2
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
         with:
           bun-version: latest
 
       # Node provides the npm CLI that speaks OIDC (trusted publishing
       # requires npm >= 11.5.1, Node >= 22.14).
       - uses: actions/setup-node@v6
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
       - run: bun install --frozen-lockfile
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
       - run: bunx tsc --noEmit
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
       - run: bun test
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
 
       - run: npm publish
-        if: steps.gate.outputs.publish == "true"
+        if: steps.gate.outputs.publish == 'true'
         # Authenticated by OIDC (trusted publisher configured on npmjs.com).
         # npm attaches the provenance attestation automatically for a public
         # repo + public package. No secrets in this workflow, on purpose.
