@@ -4,6 +4,14 @@
   "description": "6-tool MCP proxy in front of OpenScreen's 25-tool video-editing server — action enums, honest hints, a bundled skill, far fewer tokens",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Michael-Obele/openscreen-tmcp.git"
+  },
+  "homepage": "https://github.com/Michael-Obele/openscreen-tmcp#readme",
+  "bugs": {
+    "url": "https://github.com/Michael-Obele/openscreen-tmcp/issues"
+  },
   "bin": {
     "openscreen-tmcp": "./src/index.ts"
   },
@@ -37,5 +45,8 @@
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

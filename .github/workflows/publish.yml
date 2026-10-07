@@ -1,0 +1,45 @@
+# Publish to npm with OIDC trusted publishing → provenance is generated
+# automatically (no NPM_TOKEN, no --provenance flag).
+#
+# IMPORTANT: this filename (publish.yml) must match the "Workflow filename"
+# field in npmjs.com → openscreen-tmcp → Settings → Trusted Publisher,
+# exactly, including the .yml extension.
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC token for npm trusted publishing + provenance
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Bun runs install/tests (this repo is Bun-only).
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Node provides the npm CLI that speaks OIDC (trusted publishing
+      # requires npm >= 11.5.1, Node >= 22.14).
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - run: bun install --frozen-lockfile
+      - run: bunx tsc --noEmit
+      - run: bun test
+
+      - run: npm publish
+        # Authenticated by OIDC (trusted publisher configured on npmjs.com).
+        # npm attaches the provenance attestation automatically for a public
+        # repo + public package. No secrets in this workflow, on purpose.
