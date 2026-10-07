@@ -28,8 +28,18 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    steps:
-      # 1. Conventional Commits on main → open/update the Release PR; when it
+    steps:      # WHICH COMMIT MESSAGES AUTO-BUMP THE VERSION (release-please reads the
+      # Conventional Commits that land on main):
+      #   feat: ...                        -> minor bump  (0.1.1 -> 0.2.0)
+      #   fix: ...                         -> patch bump  (0.1.1 -> 0.1.2)
+      #   feat!: ... or any commit with a  -> major bump  (0.1.1 -> 1.0.0)
+      #   "BREAKING CHANGE: ..." footer
+      #   chore: / ci: / docs: / test: ... -> NO release: no Release PR is
+      #   opened, the gate below stays false, and the run exits green without
+      #   touching npm. (Verified: today's ci:/chore:/docs: commits opened none.)
+      # The bump itself lands in package.json + CHANGELOG.md ON the Release PR;
+      # merging that PR is what cuts the tag and publishes it.
+      #      # 1. Conventional Commits on main → open/update the Release PR; when it
       #    merges, create the GitHub release + vX.Y.Z tag. Skipped on tag
       #    pushes and manual runs (those paths bring their own version).
       - name: Release please
