@@ -1,6 +1,12 @@
 # Publish to npm with OIDC trusted publishing → provenance is generated
 # automatically (no NPM_TOKEN, no --provenance flag).
 #
+# Releases are driven by release-please (Conventional Commits → Release PR
+# → on merge: GitHub Release + vX.Y.Z tag + npm publish below). release-please
+# creates that tag with GITHUB_TOKEN, which GitHub will NOT let trigger other
+# workflows — so the publish steps live in THIS same workflow, gated on the
+# release-please output. Manual paths stay: push a v* tag, or run manually.
+#
 # IMPORTANT: this filename (publish.yml) must match the "Workflow filename"
 # field in npmjs.com → openscreen-tmcp → Settings → Trusted Publisher,
 # exactly, including the .yml extension.
@@ -8,38 +14,74 @@ name: Publish Package
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
 
 permissions:
   id-token: write # OIDC token for npm trusted publishing + provenance
-  contents: read
+  contents: write # release-please creates the GitHub release + tag
+  pull-requests: write # release-please opens/updates the Release PR
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      # 1. Conventional Commits on main → open/update the Release PR; when it
+      #    merges, create the GitHub release + vX.Y.Z tag. Skipped on tag
+      #    pushes and manual runs (those paths bring their own version).
+      - name: Release please
+        id: release
+        if: github.event_name == "push" && github.ref == "refs/heads/main"
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+
+      # 2. Publish only when a release was just created, on a manual v* tag,
+      #    or on workflow_dispatch. A plain push to main that creates no
+      #    release exits green here without touching npm.
+      - name: Decide whether to publish
+        id: gate
+        env:
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          REF_TYPE: ${{ github.ref_type }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$RELEASE_CREATED" = "true" ] || [ "$REF_TYPE" = "tag" ] || [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: steps.gate.outputs.publish == "true"
 
       # Bun runs install/tests (this repo is Bun-only).
       - uses: oven-sh/setup-bun@v2
+        if: steps.gate.outputs.publish == "true"
         with:
           bun-version: latest
 
       # Node provides the npm CLI that speaks OIDC (trusted publishing
       # requires npm >= 11.5.1, Node >= 22.14).
       - uses: actions/setup-node@v6
+        if: steps.gate.outputs.publish == "true"
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
       - run: bun install --frozen-lockfile
+        if: steps.gate.outputs.publish == "true"
       - run: bunx tsc --noEmit
+        if: steps.gate.outputs.publish == "true"
       - run: bun test
+        if: steps.gate.outputs.publish == "true"
 
       - run: npm publish
+        if: steps.gate.outputs.publish == "true"
         # Authenticated by OIDC (trusted publisher configured on npmjs.com).
         # npm attaches the provenance attestation automatically for a public
         # repo + public package. No secrets in this workflow, on purpose.

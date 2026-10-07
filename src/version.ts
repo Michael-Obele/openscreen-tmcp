@@ -1,8 +1,8 @@
 /**
- * Single source of truth for the version reported by this package:
- * the MCP `serverInfo` for downstream clients and the `clientInfo` sent
- * to OpenScreen during the upstream handshake.
- *
- * Keep in sync with `package.json#version`.
+ * The package version — read from `package.json`, the single source of
+ * truth. release-please bumps `package.json` only, so deriving here keeps
+ * the MCP `serverInfo` / upstream `clientInfo` in sync automatically.
  */
-export const VERSION = "0.1.1";
+import pkg from "../package.json";
+
+export const VERSION: string = pkg.version;
