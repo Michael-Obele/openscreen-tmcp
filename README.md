@@ -42,7 +42,7 @@ Optional: `OPENSCREEN_TMCP_TIMEOUT_MS` (default `15000`) and `OPENSCREEN_TMCP_DE
 
 | Tool      | Actions                                                                          | Absorbs upstream                                                                                |
 | --------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `read`    | `project`, `cursor`, `transcript`, `words`, `upstream`                           | getCurrentDocument, getCursorTrack, getTranscript, getTranscriptWords + a local coverage report |
+| `read`    | `project`, `cursor`, `transcript`, `words`, **`frames`**, `upstream`              | getCurrentDocument, getCursorTrack, getTranscript, getTranscriptWords + a local coverage report + local ffmpeg frame rendering |
 | `trim`    | `add`, `addMany`, `set`, `remove`                                                | addTrim, addTrims, setTrim, removeTrim                                                          |
 | `clip`    | `setRange`, `move`, `remove`, `replace`                                          | setClipRange, moveClip, removeClip, replaceTimeline                                             |
 | `effect`  | `add`, `set`, `remove` × `kind` ∈ zoom \| speed \| annotation \| camera \| audio | 11 effect ops + removeModifier                                                                  |
@@ -52,6 +52,8 @@ Optional: `OPENSCREEN_TMCP_TIMEOUT_MS` (default `15000`) and `OPENSCREEN_TMCP_DE
 Coverage is exact: 4 + 4 + 4 + 12 + 1 = **25**, proved by `test/coverage.test.ts` — if OpenScreen ever renames a tool, that test fails with the unmapped name.
 
 Annotations stay honest after consolidation: `read` is the only `readOnlyHint: true` tool (that's why the single transcript _write_ lives alone in `caption`), every edit tool carries `destructiveHint: true`.
+
+`read` with `action: "frames"` is local: ffmpeg renders the recording as an image, a contact sheet of evenly spaced frames or one still at an exact second, with timestamps burned in. It is how an agent sees the video before it edits.
 
 ## The rule that matters
 
