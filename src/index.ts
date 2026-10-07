@@ -1,51 +1,36 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
+/**
+ * openscreen-tmcp — a 6-tool MCP proxy in front of OpenScreen's 25-tool
+ * video-editing server. Downstream: tmcp + Valibot over stdio. Upstream:
+ * hand-rolled `fetch` + JSON-RPC over Streamable HTTP.
+ *
+ * Under stdio, **stdout is the JSON-RPC channel** — everything here logs to
+ * stderr, never stdout. A single stray console.log corrupts the protocol.
+ */
+import { StdioTransport } from "@tmcp/transport-stdio";
+import { ConfigError, loadConfig } from "./config";
+import { createServer } from "./server";
 
-import { McpServer } from 'tmcp';
-import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
-import * as v from 'valibot';
-import { StdioTransport } from '@tmcp/transport-stdio';
+let config;
+try {
+  config = loadConfig();
+} catch (err) {
+  // Fail fast and loudly *before* the transport starts: a missing token
+  // must say where to get it, not surface as a mystery failure on the
+  // first tool call.
+  if (err instanceof ConfigError) {
+    console.error(`[openscreen-tmcp] ${err.message}`);
+    process.exit(1);
+  }
+  throw err;
+}
 
-const server = new McpServer(
-	{
-		name: 'example-server',
-		version: '1.0.0',
-		description: 'An example TMCP server',
-	},
-	{
-		adapter: new ValibotJsonSchemaAdapter(),
-		capabilities: {
-			tools: { listChanged: true },
-		},
-	}
-);
+const server = createServer(config);
 
-const ExampleSchema = v.object({
-	name: v.pipe(v.string(), v.description('Name of the person')),
-	age: v.pipe(v.number(), v.description('Age of the person')),
-});
+if (config.debug) {
+  console.error(
+    `[openscreen-tmcp] starting; upstream ${config.url} (lazy connect)`,
+  );
+}
 
-
-server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `Hello ${input.name}! You are ${input.age} years old.`,
-				},
-			],
-		};
-	},
-);
-
-
-
-
-
-const stdio_transport = new StdioTransport(server);
-stdio_transport.listen();
+new StdioTransport(server).listen();

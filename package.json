@@ -1,25 +1,41 @@
 {
-	"name": "openscreen-tmcp",
-	"version": "1.0.0",
-	"description": "A TMCP (lightweight MCP) server",
-	"type": "module",
-	"main": "src/index.js",
-	"scripts": {
-		"start": "bun run src/index.js",
-		"dev": "bun run --watch src/index.js"
-	},
-	"keywords": [
-		"tmcp",
-		"mcp",
-		"server"
-	],
-	"dependencies": {
-		"tmcp": "^1.20.0",
-		"@tmcp/adapter-valibot": "^0.1.6",
-		"valibot": "^1.5.0",
-		"@tmcp/transport-stdio": "^0.5.0"
-	},
-	"devDependencies": {
-		"@types/node": "^24.0.15"
-	}
+  "name": "openscreen-tmcp",
+  "version": "0.1.0",
+  "description": "6-tool MCP proxy in front of OpenScreen's 25-tool video-editing server — action enums, honest hints, a bundled skill, far fewer tokens",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "openscreen-tmcp": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "tmcp",
+    "openscreen",
+    "video-editing",
+    "video",
+    "ai-agent",
+    "bun"
+  ],
+  "dependencies": {
+    "tmcp": "1.20.0",
+    "@tmcp/adapter-valibot": "0.1.6",
+    "@tmcp/transport-stdio": "0.5.0",
+    "valibot": "1.5.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
 }
