@@ -3,6 +3,11 @@ import { tool } from "tmcp/utils";
 import * as v from "valibot";
 import type { CallToolResult } from "tmcp";
 import type { UpstreamClient, ToolInfo } from "../upstream/client";
+import type { FramesConfig } from "../config";
+import { loadFramesConfig } from "../config";
+import { FramesError } from "../frames/errors";
+import { resolveAsset } from "../frames/resolve";
+import { frameTimes, renderFrames } from "../frames/ffmpeg";
 import {
   UPSTREAM_TOOL_NAMES,
   claimCounts,
@@ -12,8 +17,28 @@ import {
 import { describeError, toToolError } from "../upstream/errors";
 
 export const ReadInput = v.object({
-  action: v.picklist(["project", "cursor", "transcript", "words", "upstream"]),
+  action: v.picklist([
+    "project",
+    "cursor",
+    "transcript",
+    "words",
+    "frames",
+    "upstream",
+  ]),
   assetId: v.optional(v.string()),
+  /** frames: sheet (default, one image of N tiles) or frame (one still). */
+  mode: v.optional(v.picklist(["sheet", "frame"])),
+  /** frames: exact SOURCE seconds; wins over count. */
+  at: v.optional(v.array(v.number())),
+  /** frames: 1..16 evenly spaced frames when `at` is absent. Default 6. */
+  count: v.optional(v.number()),
+  /** frames: window over the source, default the whole asset. */
+  startSec: v.optional(v.number()),
+  endSec: v.optional(v.number()),
+  /** frames: low (default, cheap JPEG) or high (full-size PNG). */
+  detail: v.optional(v.picklist(["low", "high"])),
+  /** frames: skip path resolution and read this file instead. */
+  path: v.optional(v.string()),
 });
 export type ReadInput = v.InferInput<typeof ReadInput>;
 
@@ -68,10 +93,88 @@ async function coverageAction(client: UpstreamClient) {
   );
 }
 
+/**
+ * `read action:"frames"` — the only action that leaves this process. ffmpeg
+ * reads the recording file; upstream is never asked for an image it does not
+ * have. Failures the model can fix arrive as `FramesError` and are rendered
+ * verbatim.
+ */
+async function framesAction(
+  input: ReadInput,
+  client: UpstreamClient,
+  framesCfg: FramesConfig,
+): Promise<CallToolResult<undefined>> {
+  const mode = input.mode ?? "sheet";
+  const detail = input.detail ?? "low";
+
+  const resolved = await resolveAsset({
+    dataDir: framesCfg.dataDir,
+    client,
+    assetId: input.assetId,
+    path: input.path,
+  });
+
+  const startSec = Math.max(0, input.startSec ?? 0);
+  const endSec = Math.min(
+    input.endSec ?? resolved.durationSec,
+    resolved.durationSec,
+  );
+
+  const times = frameTimes({
+    count: input.count,
+    at: input.at,
+    startSec,
+    endSec,
+  });
+
+  const image = await renderFrames({
+    path: resolved.path,
+    times,
+    mode,
+    detail,
+    font: framesCfg.font,
+  });
+
+  return tool.mix([
+    tool.media("image", image.base64, image.mimeType),
+    tool.text(
+      JSON.stringify(
+        {
+          mode,
+          detail,
+          times,
+          width: image.width,
+          height: image.height,
+          assetId: resolved.assetId,
+          file: resolved.path,
+          foundVia: resolved.via,
+          durationSec: resolved.durationSec,
+          timeBase:
+            "source seconds — the recording, not the edited timeline; trims and transcript share this base, zooms do not",
+        },
+        null,
+        2,
+      ),
+    ),
+  ]);
+}
+
 export async function runRead(
   input: ReadInput,
   client: UpstreamClient,
+  framesCfg: FramesConfig = loadFramesConfig(),
 ): Promise<CallToolResult<undefined>> {
+  if (input.action === "frames") {
+    try {
+      return await framesAction(input, client, framesCfg);
+    } catch (err) {
+      if (err instanceof FramesError) {
+        console.error("[openscreen-tmcp]", err.message);
+        return tool.error(err.message);
+      }
+      return toToolError(err, client.url);
+    }
+  }
   if (input.action === "upstream") {
     try {
       return await coverageAction(client);
@@ -92,8 +195,11 @@ export function readTool(client: UpstreamClient) {
         "cursor (recorded pointer track; needs assetId; only meaningful when assets[].hasCursorTelemetry), " +
         "transcript (speech and silence segments with start/end seconds; needs assetId), " +
         "words (word-level ids for caption; needs assetId), " +
+        'frames (SEE the video: mode "sheet" (default) tiles `count` sampled frames into one image ' +
+        'with timestamps burned in, mode "frame" gives one still at `at`; times are SOURCE seconds, ' +
+        'detail "low" (default, cheap) or "high"; optional at/count/startSec/endSec/assetId/path), ' +
         "upstream (coverage report: OpenScreen’s live tool list vs this proxy’s mappings). " +
-        'Get assetId from action:"project" → assets[].',
+        'Get assetId from action:"project" → assets[]. Look before you edit: frames first, then zoom or trim.',
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
