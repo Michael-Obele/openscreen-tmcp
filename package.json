@@ -1,6 +1,6 @@
 {
   "name": "openscreen-tmcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "6-tool MCP proxy in front of OpenScreen's 25-tool video-editing server — action enums, honest hints, a bundled skill, far fewer tokens",
   "type": "module",
   "license": "MIT",
