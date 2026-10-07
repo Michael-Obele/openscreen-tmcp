@@ -267,6 +267,29 @@ describe.skipIf(
     await rm(fx.dataDir, { recursive: true, force: true });
   });
 
+  test('mode:"frame" with several times errors instead of rendering only the first', async () => {
+    const fx = await framesFixture();
+    const { client } = scriptedClient(() => ({
+      content: [{ type: "text", text: JSON.stringify(fx.doc) }],
+    }));
+
+    const result = await runRead(
+      { action: "frames", mode: "frame", at: [1, 2, 3] },
+      client,
+      { dataDir: fx.dataDir, font: "" },
+    );
+
+    // An error, not a still whose caption lists times the pixels lack.
+    expect(result.isError).toBe(true);
+    expect((result.content ?? []).map((c) => c.type)).toEqual(["text"]);
+    const message = (result.content?.[0] as { text: string }).text;
+    expect(message).toContain("3 times");
+    expect(message).toContain('mode:"sheet"');
+    expect(message).toContain("single `at`");
+
+    await rm(fx.dataDir, { recursive: true, force: true });
+  });
+
   test("a resolution failure is isError with the message, not a throw", async () => {
     const fx = await framesFixture();
     await rm(fx.clipPath, { force: true });

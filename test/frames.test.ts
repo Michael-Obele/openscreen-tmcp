@@ -13,6 +13,9 @@ import { FramesError } from "../src/frames/errors";
 const DIR = "/tmp/openscreen-frames-test";
 const CLIP = join(DIR, "clip.mp4");
 
+/** Debian's DejaVu path; the burn-in tests are gated on it being installed. */
+const DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+
 const haveFfmpeg = existsSync("/usr/bin/ffmpeg") && existsSync("/usr/bin/ffprobe");
 // `describe.skipIf` is typed boolean-only, so the skip reason lives here as a comment.
 const gate = !haveFfmpeg; // "ffmpeg/ffprobe not installed"
@@ -133,7 +136,7 @@ describe.skipIf(gate)("renderFrames", () => {
     expect(img.height).toBe(360);
   });
 
-  test("a bad font path skips burn-in instead of failing", async () => {
+  test("a bad font path skips burn-in instead of failing — and reports it", async () => {
     const img = await renderFrames({
       path: CLIP,
       times: [1],
@@ -142,7 +145,24 @@ describe.skipIf(gate)("renderFrames", () => {
       font: "/tmp/no-such-font.ttf",
     });
     expect(img.mimeType).toBe("image/jpeg");
+    expect(img.burnIn).toBe(false);
+    expect(img.font).toBeNull();
   });
+
+  test.skipIf(!existsSync(DEJAVU))(
+    "a real font burns the timestamp in and names the font it used",
+    async () => {
+      const img = await renderFrames({
+        path: CLIP,
+        times: [1],
+        mode: "frame",
+        detail: "low",
+        font: DEJAVU,
+      });
+      expect(img.burnIn).toBe(true);
+      expect(img.font).toBe(DEJAVU);
+    },
+  );
 
   test("a non-video file is a FramesError, not a crash", async () => {
     const junk = join(DIR, "junk.txt");

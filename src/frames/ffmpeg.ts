@@ -148,6 +148,10 @@ export interface RenderedImage {
   mimeType: "image/jpeg" | "image/png";
   width: number;
   height: number;
+  /** True only when a timestamp was actually drawn into the pixels. */
+  burnIn: boolean;
+  /** The font file used for the burn-in, or null when it was skipped. */
+  font: string | null;
 }
 
 /** Grid: sqrt-rounded, so 6 → 3×2, 4 → 2×2, 16 → 4×4. */
@@ -191,7 +195,11 @@ export async function renderFrames(input: RenderInput): Promise<RenderedImage> {
   try {
     const { cols, rows } = grid(input.times.length);
     const box = tileBox(src, cols, rows, CAP[input.detail]);
-    const burnIn = input.font && existsSync(input.font);
+    // A missing font file is not an error — ffmpeg would simply have no
+    // drawtext — so the decision is made once here and reported back, instead
+    // of the caller guessing whether timestamps are in the pixels.
+    const burnInFont = input.font && existsSync(input.font) ? input.font : null;
+    const burnIn = burnInFont !== null;
 
     const tiles: string[] = [];
     for (let i = 0; i < input.times.length; i++) {
@@ -206,10 +214,10 @@ export async function renderFrames(input: RenderInput): Promise<RenderedImage> {
         const cap = CAP.low;
         chain.push(`scale=${cap}:${cap}:force_original_aspect_ratio=decrease`);
       }
-      if (burnIn)
+      if (burnInFont)
         chain.push(
           "drawtext=" +
-            `fontfile=${input.font}:` +
+            `fontfile=${burnInFont}:` +
             `text='${hhmmss(input.times[i]!)}':` +
             "x=8:y=h-th-8:fontsize=22:fontcolor=white:" +
             "box=1:boxcolor=black@0.6:boxborderw=6",
@@ -275,6 +283,8 @@ export async function renderFrames(input: RenderInput): Promise<RenderedImage> {
       mimeType: high ? "image/png" : "image/jpeg",
       width: dims.width,
       height: dims.height,
+      burnIn,
+      font: burnInFont,
     };
   } finally {
     await rm(dir, { recursive: true, force: true });

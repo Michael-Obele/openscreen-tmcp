@@ -43,7 +43,13 @@ async function readDocument(client: UpstreamClient): Promise<Doc> {
   }
 }
 
-async function registryPaths(path: string): Promise<string[]> {
+/**
+ * `lastKnownPath`s from the relink registry. `null` means the registry itself
+ * could not be read (missing or malformed), which the caller must report — a
+ * swallowed miss would leave the registry out of the `Tried:` list even though
+ * it is one of the places we looked.
+ */
+async function registryPaths(path: string): Promise<string[] | null> {
   try {
     const raw = JSON.parse(await readFile(path, "utf8")) as {
       entries?: Array<{ lastKnownPath?: string }>;
@@ -52,7 +58,7 @@ async function registryPaths(path: string): Promise<string[]> {
       .map((e) => e.lastKnownPath)
       .filter((p): p is string => typeof p === "string");
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -140,11 +146,17 @@ export async function resolveAsset(input: ResolveInput): Promise<ResolvedAsset> 
 
   if (label) {
     candidates.push([join(input.dataDir, "recordings", label), "recordings"]);
-    for (const path of await registryPaths(
-      join(input.dataDir, "recordings", "media-links.registry.json"),
-    )) {
-      if (basename(path) === label) candidates.push([path, "registry"]);
-    }
+    const registry = join(
+      input.dataDir,
+      "recordings",
+      "media-links.registry.json",
+    );
+    const linked = await registryPaths(registry);
+    if (linked === null) tried.push(registry);
+    else
+      for (const path of linked) {
+        if (basename(path) === label) candidates.push([path, "registry"]);
+      }
     if (projectDir) candidates.push([join(projectDir, label), "sibling"]);
   }
 

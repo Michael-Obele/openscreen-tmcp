@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import * as v from "valibot";
 
 /**
@@ -127,18 +128,55 @@ export interface FramesConfig {
 const DEFAULT_FRAMES_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
 /**
+ * Ask fontconfig for a sans-serif font file — the design's last resort before
+ * giving up on burn-in. Returns null when `fc-match` is missing, exits
+ * non-zero, or names a file that is not on disk; the caller then keeps what it
+ * had and render's exists-check skips the burn-in.
+ *
+ * `Bun.spawn` with an args array and no shell: there is no word-splitting and
+ * no PATH-injected second command.
+ */
+async function fcMatchSans(): Promise<string | null> {
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(["fc-match", "-f", "%{file}\n", "sans"], {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "ignore",
+    });
+  } catch {
+    return null;
+  }
+  const [out, code] = await Promise.all([
+    new Response(proc.stdout as ReadableStream<Uint8Array>).text(),
+    proc.exited,
+  ]);
+  if (code !== 0) return null;
+  const file = out.trim();
+  return file && existsSync(file) ? file : null;
+}
+
+/**
  * Where OpenScreen keeps its data and which font stamps the time onto a
  * frame. Read from `env` on every call so a test can pass its own object
  * instead of mutating `process.env`.
+ *
+ * The font never throws and never comes back empty: if the configured (or
+ * default) file is not on disk, `fc-match` gets one chance to find a real
+ * font, and the configured string is kept as the final fallback so the
+ * burn-in is skipped rather than faked.
  */
-export function loadFramesConfig(
+export async function loadFramesConfig(
   env: Record<string, string | undefined> = process.env,
-): FramesConfig {
+): Promise<FramesConfig> {
   const explicit = env.OPENSCREEN_DATA_DIR?.trim();
   const xdg = env.XDG_CONFIG_HOME?.trim();
   const dataDir =
     explicit ||
     (xdg ? `${xdg}/openscreen` : `${env.HOME ?? ""}/.config/openscreen`);
-  const font = env.OPENSCREEN_FRAMES_FONT?.trim() || DEFAULT_FRAMES_FONT;
+  const configured = env.OPENSCREEN_FRAMES_FONT?.trim() || DEFAULT_FRAMES_FONT;
+  const font = existsSync(configured)
+    ? configured
+    : ((await fcMatchSans()) ?? configured);
   return { dataDir, font };
 }

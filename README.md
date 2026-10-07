@@ -65,7 +65,7 @@ Annotations stay honest after consolidation: `read` is the only `readOnlyHint: t
 
 ```bash
 bun install     # dependencies
-bun test        # 46 tests: coverage, dispatch, client, apply
+bun test        # 76 tests: apply, client, config, coverage, dispatch, frames, resolve
 bunx tsc --noEmit
 bun run dev     # watch mode
 ```

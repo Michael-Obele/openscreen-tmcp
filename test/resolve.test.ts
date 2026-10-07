@@ -107,6 +107,11 @@ describe.skipIf(gate)("resolveAsset", () => {
     );
     expect(err).toBeInstanceOf(FramesError);
     expect((err as Error).message).toContain("Tried:");
+    // The registry is one of the places we looked; an absent file must still
+    // be named, not swallowed by the empty fallback.
+    expect((err as Error).message).toContain(
+      join(fx.dataDir, "recordings", "media-links.registry.json"),
+    );
     expect((err as Error).message).toContain("Pass `path`");
 
     await rm(fx.dataDir, { recursive: true, force: true });

@@ -127,6 +127,16 @@ async function framesAction(
     endSec,
   });
 
+  // One image cannot carry several times: ffmpeg would composite only the
+  // first tile, yet the caption below lists them all. Fail loudly with the way
+  // out instead of shipping a still whose pixels disagree with its caption.
+  if (mode === "frame" && times.length > 1)
+    throw new FramesError(
+      `mode:"frame" returns a single still, but ${times.length} times were requested ` +
+        `(${times.join(", ")}). Use mode:"sheet" to tile several times into one image, ` +
+        "or pass a single `at` (or count:1).",
+    );
+
   const image = await renderFrames({
     path: resolved.path,
     times,
@@ -143,6 +153,8 @@ async function framesAction(
           mode,
           detail,
           times,
+          burnIn: image.burnIn,
+          font: image.font,
           width: image.width,
           height: image.height,
           assetId: resolved.assetId,
@@ -162,11 +174,15 @@ async function framesAction(
 export async function runRead(
   input: ReadInput,
   client: UpstreamClient,
-  framesCfg: FramesConfig = loadFramesConfig(),
+  framesCfg?: FramesConfig,
 ): Promise<CallToolResult<undefined>> {
   if (input.action === "frames") {
     try {
-      return await framesAction(input, client, framesCfg);
+      return await framesAction(
+        input,
+        client,
+        framesCfg ?? (await loadFramesConfig()),
+      );
     } catch (err) {
       if (err instanceof FramesError) {
         console.error("[openscreen-tmcp]", err.message);
