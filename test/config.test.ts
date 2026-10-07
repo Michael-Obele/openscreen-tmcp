@@ -3,13 +3,29 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadFramesConfig } from "../src/config";
 
+// The default font is the Debian DejaVu path. `loadFramesConfig` falls back to
+// `fc-match` when that file is absent, so the exact path is only assertable on a
+// host that has it; every other host still gets checked for a usable font.
+const DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+const hasDejavu = existsSync(DEJAVU);
+
+/**
+ * Assert the default font resolution without pinning the host. Where the DejaVu
+ * file exists the resolved font must be exactly that path; elsewhere `fc-match`
+ * may name a real font, or (with no fontconfig either) the configured default is
+ * kept so render skips burn-in. Never empty.
+ */
+function expectResolvedDefaultFont(font: string): void {
+  expect(font).not.toBe("");
+  if (hasDejavu) expect(font).toBe(DEJAVU);
+  else expect(existsSync(font) || font === DEJAVU).toBe(true);
+}
+
 describe("loadFramesConfig", () => {
   test("defaults to ~/.config/openscreen and the DejaVu font", async () => {
     const cfg = await loadFramesConfig({ HOME: "/home/node" });
     expect(cfg.dataDir).toBe("/home/node/.config/openscreen");
-    expect(cfg.font).toBe(
-      "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    );
+    expectResolvedDefaultFont(cfg.font);
   });
 
   test("XDG_CONFIG_HOME wins over HOME", async () => {
@@ -42,9 +58,7 @@ describe("loadFramesConfig", () => {
       HOME: "/h",
       OPENSCREEN_FRAMES_FONT: "  ",
     });
-    expect(cfg.font).toBe(
-      "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    );
+    expectResolvedDefaultFont(cfg.font);
   });
 
   test("a missing font file falls back to fc-match, never to an empty string", async () => {

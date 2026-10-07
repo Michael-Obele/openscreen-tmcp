@@ -53,7 +53,7 @@ Coverage is exact: 4 + 4 + 4 + 12 + 1 = **25**, proved by `test/coverage.test.ts
 
 Annotations stay honest after consolidation: `read` is the only `readOnlyHint: true` tool (that's why the single transcript _write_ lives alone in `caption`), every edit tool carries `destructiveHint: true`.
 
-`read` with `action: "frames"` is local: ffmpeg renders the recording as an image, a contact sheet of evenly spaced frames or one still at an exact second, with timestamps burned in. It is how an agent sees the video before it edits.
+`read` with `action: "frames"` is local: ffmpeg renders the recording as an image, a contact sheet of evenly spaced frames or one still at an exact second, with timestamps burned in when a caption font is found (a false `burnIn` in the reply means none were drawn). It is how an agent sees the video before it edits.
 
 ## The rule that matters
 
@@ -65,7 +65,7 @@ Annotations stay honest after consolidation: `read` is the only `readOnlyHint: t
 
 ```bash
 bun install     # dependencies
-bun test        # 76 tests: apply, client, config, coverage, dispatch, frames, resolve
+bun test        # 77 tests: apply, client, config, coverage, dispatch, frames, resolve
 bunx tsc --noEmit
 bun run dev     # watch mode
 ```

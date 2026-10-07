@@ -11,7 +11,7 @@ You drive the **OpenScreen** app, which has a screen recording open in its edito
 
 1. `read` with `action: "project"` — see the assets, the placed clips, and existing trims/modifiers. **Never edit blind.**
 2. If the user talks about what was _said_, `read` with `action: "transcript"` (or `"words"` for word-level ids).
-3. `read` with `action: "frames"`: actually SEE the recording. Use it before placing a zoom, a trim or an annotation: `{"action":"frames","count":6}` gives the shape of the whole take with timestamps burned in, `{"action":"frames","mode":"frame","at":[14.18]}` gives the exact frame at a moment you already know. Times are **source seconds** (like trims), not the edited timeline. `detail:"high"` when you must read text on screen.
+3. `read` with `action: "frames"`: actually SEE the recording. Use it before placing a zoom, a trim or an annotation: `{"action":"frames","count":6}` gives the shape of the whole take with timestamps burned in when a caption font is found (a false `burnIn` in the reply means none were drawn), `{"action":"frames","mode":"frame","at":[14.18]}` gives the exact frame at a moment you already know. Times are **source seconds** (like trims), not the edited timeline. `detail:"high"` when you must read text on screen.
 4. Then act.
 
 ## The one rule that causes the most damage

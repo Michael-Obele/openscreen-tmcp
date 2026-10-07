@@ -116,6 +116,38 @@ describe.skipIf(gate)("resolveAsset", () => {
 
     await rm(fx.dataDir, { recursive: true, force: true });
   });
+
+  test("a registry that parses but has no entry for the label is named too", async () => {
+    const fx = await framesFixture();
+    await rm(fx.clipPath);
+    await rm(join(fx.dataDir, "projects", "proj_1.openscreen"));
+    // The registry is readable, but nothing in it matches rec.mp4.
+    await writeFile(
+      join(fx.dataDir, "recordings", "media-links.registry.json"),
+      JSON.stringify({
+        version: 1,
+        entries: [{ lastKnownPath: "/somewhere/else/other.mp4" }],
+      }),
+    );
+    const { client } = scriptedClient(() => ({
+      content: [{ type: "text", text: JSON.stringify(fx.doc) }],
+    }));
+
+    const err = await resolveAsset({ dataDir: fx.dataDir, client }).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(FramesError);
+    const message = (err as Error).message;
+    // The registry is one of the places consulted, so it must be named even
+    // though it yielded no usable match.
+    expect(message).toContain(
+      join(fx.dataDir, "recordings", "media-links.registry.json"),
+    );
+    // Its non-matching entry must not be reported as a location tried.
+    expect(message).not.toContain("other.mp4");
+
+    await rm(fx.dataDir, { recursive: true, force: true });
+  });
 });
 
 describe("FramesError shape", () => {

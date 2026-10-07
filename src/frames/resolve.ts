@@ -45,7 +45,8 @@ async function readDocument(client: UpstreamClient): Promise<Doc> {
 
 /**
  * `lastKnownPath`s from the relink registry. `null` means the registry itself
- * could not be read (missing or malformed), which the caller must report — a
+ * could not be read (missing or malformed), and an empty array means it parsed
+ * but holds no usable entry. Both are misses the caller must report — a
  * swallowed miss would leave the registry out of the `Tried:` list even though
  * it is one of the places we looked.
  */
@@ -153,10 +154,18 @@ export async function resolveAsset(input: ResolveInput): Promise<ResolvedAsset> 
     );
     const linked = await registryPaths(registry);
     if (linked === null) tried.push(registry);
-    else
+    else {
+      let matched = false;
       for (const path of linked) {
-        if (basename(path) === label) candidates.push([path, "registry"]);
+        if (basename(path) === label) {
+          candidates.push([path, "registry"]);
+          matched = true;
+        }
       }
+      // A registry that parses but names nothing for this label is still one of
+      // the places we looked, so it must be named in `Tried:` too.
+      if (!matched) tried.push(`${registry} (no entry for ${label})`);
+    }
     if (projectDir) candidates.push([join(projectDir, label), "sibling"]);
   }
 
